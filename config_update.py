@@ -3,15 +3,16 @@ import subprocess
 import sys
 import os
 from datetime import datetime
-import ipdb
+from subprocess import Popen, PIPE
 
 # Skyler Ogden
 # This script is design to pull the configs from an existing LED or HID install to update current config files
 
 if len(sys.argv) <= 2:
-    # Test to ensure that the user as provided an IP address for site being polled for config files
+    # Test to ensure that the user as provided an IP address and site number
     print "This script requires an IP address and an EnFlex version number"
     print "Example: python {} 10.77.87.31 3.5".format(sys.argv[0])
+    print "Example with optional directory: python {} 10.77.87.31 3.5".format(sys.argv[0])
     sys.exit()
 else:
     # Assign passed arguments to variables
@@ -55,11 +56,19 @@ else:
     # Concatenate all files into a single string to allow for one scp call later
     config_call = " ".join(config_files)
 
+def get_hostname():
+    global hostname
+    stdout, stderr = Popen(['ssh', 'root@10.77.87.31', 'hostname'], stdout=PIPE).communicate()
+    base, hostname = os.path.splitext(stdout)
+    hostname = hostname.rstrip()
+    hostname = hostname.translate(None, '.?')
+    print hostname
+    return
 
 def create_config_file():
     # Concatenate the string with the current system timestamp
     global config_dir
-    config_dir = "config_{}".format(datetime.now().strftime('%Y%m%d_%H%M%S'))
+    config_dir = "{}_configs_{}_{}".format(hostname, site_IP, datetime.now().strftime('%Y%m%d_%H%M%S'))
 
     # Create the timestamped folder
     subprocess.call(['mkdir', config_dir])
@@ -75,6 +84,8 @@ def scp_pull():
     ])
     return
 
+if site_type == "3.5":
+    get_hostname()
 
 create_config_file()
 scp_pull()
